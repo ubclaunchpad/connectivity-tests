@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-#
-# Reference ping test. Runs in the probe's Debian-based Linux container with
-# Bash and iputils-ping. The destination and echo count are fixed; this test
-# accepts no arguments or environment configuration.
 
 set -u
 
@@ -15,8 +11,6 @@ output=$(LC_ALL=C ping -n -4 -c "$PING_COUNT" -W "$PING_TIMEOUT" -w "$PING_DEADL
 status=$?
 
 die() {
-    # Preserve the captured ping output for diagnosis, but never put it on
-    # stdout: stdout is reserved for a successful result wrapper.
     if [[ -n "$output" ]]; then
         printf '%s\n' "$output" >&2
     fi
@@ -24,20 +18,12 @@ die() {
     exit 1
 }
 
-# iputils uses 0 for a completed measurement and 1 for a measurement with no
-# replies. Values of 2 or greater indicate an execution error. A status of 1
-# with responses is still a valid completed measurement (for example, when the
-# deadline stops the run after some replies).
+# Exit 1 can still include a valid measurement.
 if (( status >= 2 )); then
     die "ping exited with status $status"
 fi
 
-# iputils writes duplicates, corrupted, and error counters before the loss
-# field. Newer versions may append the optional pipe size to the statistics
-# line (after the elapsed time as " pipe N", or after the RTT as ", pipe N"),
-# or print it on its own separate line, which is ignored. The loss value is
-# constrained to a JSON-compatible decimal no greater than 100, so impossible
-# percentages and leading-zero numbers are rejected here.
+# iputils can add counters and a pipe suffix.
 summary_re='^([0-9]+) packets transmitted, ([0-9]+) received(, \+[0-9]+ duplicates)?(, \+[0-9]+ corrupted)?(, \+[0-9]+ errors)?, ((0|[1-9][0-9]?)([.][0-9]+)?|100([.]0+)?)% packet loss(, time [0-9]+ms)?( pipe [0-9]+)?$'
 rtt_re='^rtt min/avg/max/mdev = (0|[1-9][0-9]*)([.][0-9]+)?/(0|[1-9][0-9]*)([.][0-9]+)?/(0|[1-9][0-9]*)([.][0-9]+)?/(0|[1-9][0-9]*)([.][0-9]+)? ms(, pipe [0-9]+)?$'
 
@@ -75,8 +61,6 @@ if (( 10#$received > 10#$sent )); then
 fi
 
 if (( 10#$received == 0 )); then
-    # A genuine total loss must be based on a real summary with sent packets
-    # and no replies. iputils reports this as 100% loss.
     if [[ ! "$loss" =~ ^100([.][0]+)?$ ]]; then
         die "zero replies reported with inconsistent packet loss '$loss%'"
     fi
@@ -87,7 +71,6 @@ if (( 10#$received == 0 )); then
     exit 0
 fi
 
-# Any measurement with replies must have a usable average RTT.
 if (( rtt_count == 0 )); then
     die "missing RTT statistics for a measurement with replies"
 fi
