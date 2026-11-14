@@ -32,12 +32,14 @@ if (( status >= 2 )); then
     die "ping exited with status $status"
 fi
 
-# iputils writes duplicates and errors before the loss field. Newer versions
-# may append the optional pipe size after the elapsed time, or on its own line.
-# The loss value is constrained to a JSON-compatible decimal no greater than
-# 100, so impossible percentages and leading-zero numbers are rejected here.
-summary_re='^([0-9]+) packets transmitted, ([0-9]+) received(, \+[0-9]+ duplicates)?(, \+[0-9]+ errors)?, ((0|[1-9][0-9]?)([.][0-9]+)?|100([.]0+)?)% packet loss(, time [0-9]+ms)?( pipe [0-9]+)?$'
-rtt_re='^rtt min/avg/max/mdev = (0|[1-9][0-9]*)([.][0-9]+)?/(0|[1-9][0-9]*)([.][0-9]+)?/(0|[1-9][0-9]*)([.][0-9]+)?/(0|[1-9][0-9]*)([.][0-9]+)? ms$'
+# iputils writes duplicates, corrupted, and error counters before the loss
+# field. Newer versions may append the optional pipe size to the statistics
+# line (after the elapsed time as " pipe N", or after the RTT as ", pipe N"),
+# or print it on its own separate line, which is ignored. The loss value is
+# constrained to a JSON-compatible decimal no greater than 100, so impossible
+# percentages and leading-zero numbers are rejected here.
+summary_re='^([0-9]+) packets transmitted, ([0-9]+) received(, \+[0-9]+ duplicates)?(, \+[0-9]+ corrupted)?(, \+[0-9]+ errors)?, ((0|[1-9][0-9]?)([.][0-9]+)?|100([.]0+)?)% packet loss(, time [0-9]+ms)?( pipe [0-9]+)?$'
+rtt_re='^rtt min/avg/max/mdev = (0|[1-9][0-9]*)([.][0-9]+)?/(0|[1-9][0-9]*)([.][0-9]+)?/(0|[1-9][0-9]*)([.][0-9]+)?/(0|[1-9][0-9]*)([.][0-9]+)? ms(, pipe [0-9]+)?$'
 
 summary_count=0
 rtt_count=0
@@ -51,7 +53,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         summary_count=$((summary_count + 1))
         sent=${BASH_REMATCH[1]}
         received=${BASH_REMATCH[2]}
-        loss=${BASH_REMATCH[5]}
+        loss=${BASH_REMATCH[6]}
     elif [[ "$line" =~ $rtt_re ]]; then
         rtt_count=$((rtt_count + 1))
         rtt_avg="${BASH_REMATCH[3]}${BASH_REMATCH[4]}"
