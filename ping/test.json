@@ -1,0 +1,21 @@
+{
+  "test_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+  "name": "Ping",
+  "metrics": {
+    "rtt_avg_ms": {
+      "label": "Average latency",
+      "type": "number",
+      "unit": "ms",
+      "nullable": true
+    },
+    "packet_loss_pct": {
+      "label": "Packet loss",
+      "type": "number",
+      "unit": "%",
+      "nullable": false
+    }
+  },
+  "map": {
+    "default_metric": "rtt_avg_ms"
+  }
+}
